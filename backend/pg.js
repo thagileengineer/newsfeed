@@ -26,5 +26,3 @@ export default async function connectToDB() {
     console.log("🔌 Connection closed");
   }
 }
-
-connectToDB();

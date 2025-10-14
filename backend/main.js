@@ -1,5 +1,6 @@
 import express from 'express';
 import connectToDB from './pg.js';
+import './neo4j.js';
 
 const app = express();
 const port = 4000;
@@ -12,5 +13,4 @@ app.get('/health', (req, res)=>{
 
 app.listen(port, ()=>{
     console.log("Listening on port http://localhost:"+ port);
-    
 })
