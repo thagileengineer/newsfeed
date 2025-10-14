@@ -1,22 +1,30 @@
-import pkg from 'pg';
+import dotenv from "dotenv";
+import pkg from "pg";
+
+dotenv.config(); // Load variables from .env
+
 const { Client } = pkg;
 
-const client = new Client({
-  host: 'localhost',
-  port: 5432,
-  user: 'postgres',
-  password: '',
-  database: 'postgres',
-});
-
-export default async function connectToDB (){
+export default async function connectToDB() {
+  const client = new Client({
+    host: process.env.PG_HOST,
+    port: process.env.PG_PORT,
+    user: process.env.PG_USER,
+    password: process.env.PG_PASSWORD,
+    database: process.env.PG_DATABASE,
+  });
   try {
     await client.connect();
-    console.log('✅ Connected to PostgreSQL');
+    console.log("✅ Connected to PostgreSQL");
 
     // const res = await client.query('SELECT * FROM your_table_name');
     // console.log('📦 Query Result:', res.rows);
   } catch (err) {
-    console.error('❌ Error:', err);
+    console.error("❌ Error:", err);
+  } finally {
+    await client.end();
+    console.log("🔌 Connection closed");
   }
-};
+}
+
+connectToDB();
