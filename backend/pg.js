@@ -5,7 +5,7 @@ dotenv.config(); // Load variables from .env
 
 const { Client } = pkg;
 
-export default async function connectToDB() {
+async function connectToDB() {
   const client = new Client({
     host: process.env.PG_HOST,
     port: process.env.PG_PORT,
@@ -26,3 +26,5 @@ export default async function connectToDB() {
     console.log("🔌 Connection closed");
   }
 }
+
+connectToDB();
