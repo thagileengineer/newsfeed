@@ -96,6 +96,54 @@ async function createUser(payload, hashedPassword) {
   return result.rows[0];
 }
 
+
+app.post('/auth/login', async (req, res)=>{
+    const {username, password} = req.body;
+
+    try {
+        const user = await getUserForLogin(username);
+
+        if(!user){
+            return res.status(401).json({message: "Invalid username or password"});
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+        if(!isPasswordValid){
+            return res.status(401).json({message: "Invalid username or password"});
+        }
+
+        const payload = {
+            id: user.user_id,
+            username: user.username,
+            role: user.role || 'user'
+        }
+
+        const token = jwt.sign(payload, SECRET_KEY, {expiresIn: '2h'});
+        res.json({token});
+
+    } catch (error) {
+        console.error('[DB ERROR] Login failed:', error);
+        res.status(500).json({ message: 'Internal server error during authentication.' });
+    }
+})
+
+/**
+ * gets user by username for login.
+ * @param {string} username 
+ * @returns {Promise}
+ */
+async function getUserForLogin(username) {
+    const queryText = `
+        SELECT user_id, username, password_hash
+        FROM users
+        WHERE username = $1;
+    `;
+
+    const result = await pool.query(queryText, [username]);
+
+    return result.rows[0];
+}
+
 // -----------------------------------------------------------------
 // B. START THE SERVICE
 // -----------------------------------------------------------------
