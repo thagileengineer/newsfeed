@@ -1,16 +1,4 @@
-import express from 'express';
-import './pg.js';
-import './neo4j.js';
-import './redis.js';
-
-const app = express();
-const port = 4000;
-
-
-app.get('/health', (req, res)=>{
-    res.send('Jinda hu main!!')
-})
-
-app.listen(port, ()=>{
-    console.log("Listening on port http://localhost:"+ port);
-})
+import './src/services/pg.js';
+// import './neo4j.js';
+// import './redis.js';
+import './src/services/gateway.service.js'
