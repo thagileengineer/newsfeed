@@ -2,13 +2,15 @@ import axios from "axios";
 import bodyParser from "body-parser";
 import express from "express";
 import jwt from "jsonwebtoken";
+import dotenv from 'dotenv';
 import "./user.service.js";
 
 const app = express();
 app.use(bodyParser.json());
+dotenv.config();
 
 const USER_SERVICE_URL = "http://localhost:4001";
-const SECRET = "1234";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 app.get("/health", (req, res) => {
   res.status(200).json({ message: "Alive!!" });
@@ -58,7 +60,7 @@ const authenticateToken = (req, res, next) => {
   if (authToken == null)
     return res.status(401).json({ message: "Access token required" });
 
-  jwt.verify(authToken, SECRET, (err, user) => {
+  jwt.verify(authToken, JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({ message: "Invalid or expired token" });
     }
@@ -68,6 +70,18 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+app.get('/users/:userId', authenticateToken , async (req, res)=>{
+  const userId = req.params['userId'];
+  try {
+    const response = await axios.get(`${USER_SERVICE_URL}/users/${userId}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if(error.response){
+      return res.status(error.response.status).json(error.response.data)
+    }
+  }
+})
 
 
 

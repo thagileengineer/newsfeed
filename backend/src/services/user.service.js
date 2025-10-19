@@ -144,6 +144,44 @@ async function getUserForLogin(username) {
     return result.rows[0];
 }
 
+
+app.get('/users/:userId', async (req, res)=>{
+    const userId = req.params['userId'];
+    try {
+        const userData = await getUserInfoById(userId);
+        if(!userData){
+            return res.status(404).json({message: "User not found"});
+        }
+
+        res.status(200).json({
+            id: userData.user_id,
+            username: userData.username,
+            firstname: userData.first_name,
+            middlename: userData.middle_name,
+            lastname: userData.last_name,
+            email: userData.email
+        });
+    } catch (error) {
+        
+    }
+})
+
+/**
+ * gets user details by user id
+ * @param {number} user_id 
+ * @returns {Promise<User>}
+ */
+async function getUserInfoById(user_id){
+    const queryText = `
+        SELECT user_id, username, first_name, middle_name, last_name, email
+        FROM users
+        WHERE user_id = $1;
+    `;
+
+    const result = await pool.query(queryText, [user_id]);
+    return result.rows[0];
+}
+
 // -----------------------------------------------------------------
 // B. START THE SERVICE
 // -----------------------------------------------------------------
