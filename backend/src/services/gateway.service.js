@@ -4,12 +4,14 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import dotenv from 'dotenv';
 import "./user.service.js";
+import "./post.service.js";
 
 const app = express();
 app.use(bodyParser.json());
 dotenv.config();
 
 const USER_SERVICE_URL = "http://localhost:4001";
+const POST_SERVICE_URL = "http://localhost:4002";
 const JWT_SECRET = process.env.JWT_SECRET;
 
 app.get("/health", (req, res) => {
@@ -97,10 +99,28 @@ app.post('/users/follows', authenticateToken, async (req, res)=>{
       return res.status(error.response.status).json(error.response.data)
     }
   }
+});
+
+
+
+app.post('/posts', authenticateToken,async (req, res)=>{
+    try {
+      const response = await axios.post(`${POST_SERVICE_URL}/posts`, req.body, {
+        headers: {
+          "x-user-id": req.headers["x-user-id"],
+        },
+      });
+
+      res.status(response.status).json(response.data);
+    } catch (error) {
+      if(error.response){
+        return res.status(error.response.status).json(error.response.data)
+      }
+    }
 })
 
 
-const GATEWAY_PORT = 3000;
+const GATEWAY_PORT = process.env.GATEWAY_PORT;
 app.listen(GATEWAY_PORT, () => {
   console.log(`API Gateway running on port ${GATEWAY_PORT}`);
 });

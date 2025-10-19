@@ -247,7 +247,7 @@ async function addFollowRelationship(followerId, followingId) {
 // -----------------------------------------------------------------
 // B. START THE SERVICE
 // -----------------------------------------------------------------
-const USER_SERVICE_PORT = 4001;
+const USER_SERVICE_PORT = process.env.USER_SERVICE_PORT;
 app.listen(USER_SERVICE_PORT, () => {
   console.log(`User Service running on port ${USER_SERVICE_PORT}`);
 });
