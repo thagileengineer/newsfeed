@@ -17,8 +17,7 @@ app.use(bodyParser.json());
 // USER CREATION
 //------------------------
 app.post("/auth/register", async (req, res) => {
-  const { username, password, firstname, email } =
-    req.body;
+  const { username, password, firstname, email } = req.body;
 
   // 1. Basic check
   if (!username || !password || !email || !firstname) {
@@ -59,7 +58,6 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
-
 /**
  * Checks if a user exists by username OR email.
  * @param {string} username - The username to check.
@@ -96,90 +94,154 @@ async function createUser(payload, hashedPassword) {
   return result.rows[0];
 }
 
+app.post("/auth/login", async (req, res) => {
+  const { username, password } = req.body;
 
-app.post('/auth/login', async (req, res)=>{
-    const {username, password} = req.body;
+  try {
+    const user = await getUserForLogin(username);
 
-    try {
-        const user = await getUserForLogin(username);
-
-        if(!user){
-            return res.status(401).json({message: "Invalid username or password"});
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-        if(!isPasswordValid){
-            return res.status(401).json({message: "Invalid username or password"});
-        }
-
-        const payload = {
-            id: user.user_id,
-            username: user.username,
-            role: user.role || 'user'
-        }
-
-        const token = jwt.sign(payload, SECRET_KEY, {expiresIn: '2h'});
-        res.json({token});
-
-    } catch (error) {
-        console.error('[DB ERROR] Login failed:', error);
-        res.status(500).json({ message: 'Internal server error during authentication.' });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid username or password" });
     }
-})
+
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
+
+    const payload = {
+      id: user.user_id,
+      username: user.username,
+      role: user.role || "user",
+    };
+
+    const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "2h" });
+    res.json({ token });
+  } catch (error) {
+    console.error("[DB ERROR] Login failed:", error);
+    res
+      .status(500)
+      .json({ message: "Internal server error during authentication." });
+  }
+});
 
 /**
  * gets user by username for login.
- * @param {string} username 
+ * @param {string} username
  * @returns {Promise}
  */
 async function getUserForLogin(username) {
-    const queryText = `
+  const queryText = `
         SELECT user_id, username, password_hash
         FROM users
         WHERE username = $1;
     `;
 
-    const result = await pool.query(queryText, [username]);
+  const result = await pool.query(queryText, [username]);
 
-    return result.rows[0];
+  return result.rows[0];
 }
 
-
-app.get('/users/:userId', async (req, res)=>{
-    const userId = req.params['userId'];
-    try {
-        const userData = await getUserInfoById(userId);
-        if(!userData){
-            return res.status(404).json({message: "User not found"});
-        }
-
-        res.status(200).json({
-            id: userData.user_id,
-            username: userData.username,
-            firstname: userData.first_name,
-            middlename: userData.middle_name,
-            lastname: userData.last_name,
-            email: userData.email
-        });
-    } catch (error) {
-        
+app.get("/users/:userId", async (req, res) => {
+  const userId = req.params["userId"];
+  try {
+    const userData = await getUserInfoById(userId);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
     }
-})
+
+    res.status(200).json({
+      id: userData.user_id,
+      username: userData.username,
+      firstname: userData.first_name,
+      middlename: userData.middle_name,
+      lastname: userData.last_name,
+      email: userData.email,
+    });
+  } catch (error) {}
+});
 
 /**
  * gets user details by user id
- * @param {number} user_id 
+ * @param {number} user_id
  * @returns {Promise<User>}
  */
-async function getUserInfoById(user_id){
-    const queryText = `
+async function getUserInfoById(user_id) {
+  const queryText = `
         SELECT user_id, username, first_name, middle_name, last_name, email
         FROM users
         WHERE user_id = $1;
     `;
 
-    const result = await pool.query(queryText, [user_id]);
-    return result.rows[0];
+  const result = await pool.query(queryText, [user_id]);
+  return result.rows[0];
+}
+
+app.post("/users/follows", async (req, res) => {
+  const followerId = parseInt(req.headers["x-user-id"]);
+  const { followingId } = req.body;
+
+  if (!followingId || isNaN(parseInt(followingId))) {
+    return res.status(400).json({ message: "Missing or invalid arguments." });
+  }
+
+  try {
+    const followingIdInt = parseInt(followingId);
+
+    // Check for self-follow constraint
+    if (followerId === followingIdInt) {
+      return res.status(400).json({ message: "Cannot follow yourself." });
+    }
+
+    const followCreated = await addFollowRelationship(
+      followerId,
+      followingIdInt
+    );
+    if (!followCreated) {
+      const targetUser = await getUserInfoById(followingIdInt);
+      if (!targetUser) {
+        return res
+          .status(404)
+          .json({ message: `Target user ID ${followingIdInt} not found.` });
+      }
+      return res.status(200).json({ message: "Already following this user." });
+    }
+
+    res.status(201).json({
+      message: `User ${followerId} is now following user ${followingIdInt}.`,
+    });
+  } catch (error) {
+    console.error("[DB ERROR] Failed to add follow relationship:", error);
+    res
+      .status(500)
+      .json({ message: "Internal server error during follow request." });
+  }
+});
+
+/**
+ *  * Creates a follow relationship using UPSERT (ON CONFLICT DO NOTHING).
+ * @param {number} followerId
+ * @param {number} followingId
+ * @returns {boolean} True if a new follow was created, false otherwise.
+ */
+async function addFollowRelationship(followerId, followingId) {
+  const usersExists = await getUserInfoById(followingId);
+  if (!usersExists) {
+    return false;
+  }
+
+  const queryText = `
+        INSERT INTO follows(follower_id, following_id)
+        VALUES ($1, $2)
+        ON CONFLICT (follower_id, following_id) DO NOTHING
+        RETURNING follower_id;
+    `;
+
+  if (followerId === followingId) {
+    throw new Error("Cannot follow yourself.");
+  }
+  const result = await pool.query(queryText, [followerId, followingId]);
+  return result.rowCount > 0;
 }
 
 // -----------------------------------------------------------------

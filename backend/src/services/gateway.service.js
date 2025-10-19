@@ -83,6 +83,21 @@ app.get('/users/:userId', authenticateToken , async (req, res)=>{
   }
 })
 
+app.post('/users/follows', authenticateToken, async (req, res)=>{
+  try {
+    const response = await axios.post(`${USER_SERVICE_URL}/users/follows`, req.body, {
+      headers: {
+        'x-user-id': req.headers['x-user-id']
+      }
+    });
+    res.status(response.status).json(response.data)
+    
+  } catch (error) {
+     if(error.response){
+      return res.status(error.response.status).json(error.response.data)
+    }
+  }
+})
 
 
 const GATEWAY_PORT = 3000;
