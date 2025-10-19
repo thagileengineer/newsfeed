@@ -117,7 +117,24 @@ app.post('/posts', authenticateToken,async (req, res)=>{
         return res.status(error.response.status).json(error.response.data)
       }
     }
-})
+});
+
+
+app.get('/posts/by-user', authenticateToken, async (req, res)=>{
+   try {
+      const response = await axios.get(`${POST_SERVICE_URL}/posts/by-user`, {
+        headers: {
+          "x-user-id": req.headers["x-user-id"],
+        },
+      });
+
+      res.status(response.status).json(response.data);
+    } catch (error) {
+      if(error.response){
+        return res.status(error.response.status).json(error.response.data)
+      }
+    }
+});
 
 
 const GATEWAY_PORT = process.env.GATEWAY_PORT;
