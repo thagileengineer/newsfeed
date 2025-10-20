@@ -120,20 +120,17 @@ app.post('/posts', authenticateToken,async (req, res)=>{
 });
 
 
-app.get('/posts/by-user', authenticateToken, async (req, res)=>{
-   try {
-      const response = await axios.get(`${POST_SERVICE_URL}/posts/by-user`, {
-        headers: {
-          "x-user-id": req.headers["x-user-id"],
-        },
-      });
+app.get('/posts/by-user/:userId', authenticateToken, async (req, res)=>{
+  const userId = req.params['userId'] ?? req.headers["x-user-id"];
+  try {
+    const response = await axios.get(`${POST_SERVICE_URL}/posts/by-user/${userId}`);
 
-      res.status(response.status).json(response.data);
-    } catch (error) {
-      if(error.response){
-        return res.status(error.response.status).json(error.response.data)
-      }
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if(error.response){
+      return res.status(error.response.status).json(error.response.data)
     }
+  }
 });
 
 

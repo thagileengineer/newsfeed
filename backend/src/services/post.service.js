@@ -54,8 +54,8 @@ async function addNewPost(userId, {title, content, tags, mediaUrl }){
 }
 
 
-app.get('/posts/by-user', async (req, res)=>{
-    const authorId = parseInt(req.headers['x-user-id']);
+app.get('/posts/by-user/:userId', async (req, res)=>{
+    const authorId = parseInt(req.params['userId']);
 
     try {
         const allPosts = await getAllPostsByAuthorId(authorId);
@@ -67,6 +67,24 @@ app.get('/posts/by-user', async (req, res)=>{
         .json({ message: "Internal server error while fetching posts." });
     }
 });
+
+
+/**
+ * get all posts by logged in user.
+ * @param {number} authorId 
+ * @returns Post array
+ */
+async function getAllPostsByAuthorId(authorId){
+    const queryText = `
+        SELECT post_id, author_id, title, content, tags, media_url, created_at
+        FROM posts
+        WHERE author_id = $1
+        ORDER BY created_at DESC;
+    `;
+    // The query expects the array of IDs as the first parameter ($1)
+    const result = await pool.query(queryText, [authorId]);
+    return result.rows;
+}
 
 /**
  * get all posts by logged in user.
