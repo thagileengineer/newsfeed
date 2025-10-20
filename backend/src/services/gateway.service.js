@@ -101,6 +101,22 @@ app.post('/users/follows', authenticateToken, async (req, res)=>{
   }
 });
 
+app.post('/users/unfollow', authenticateToken, async (req, res)=>{
+  try {
+    const response = await axios.post(`${USER_SERVICE_URL}/users/unfollow`, req.body, {
+      headers: {
+        'x-user-id': req.headers['x-user-id']
+      }
+    });
+    res.status(response.status).json(response.data)
+    
+  } catch (error) {
+     if(error.response){
+      return res.status(error.response.status).json(error.response.data)
+    }
+  }
+});
+
 
 
 app.post('/posts', authenticateToken,async (req, res)=>{

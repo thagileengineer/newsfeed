@@ -275,6 +275,50 @@ async function getFollowingIds(userId) {
     return result.rows.map(row => row.following_id);
 }
 
+
+app.post("/users/unfollow", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"]);
+  const { followingId } = req.body;
+
+  if (!followingId || isNaN(parseInt(followingId))) {
+    return res.status(400).json({ message: "Missing or invalid arguments." });
+  }
+
+  try {
+    const followingIdInt = parseInt(followingId);
+
+    // Check for self-follow constraint
+    if (userId === followingIdInt) {
+      return res.status(400).json({ message: "Cannot unfollow yourself." });
+    }
+
+    const followRemoved = await removeFollowRelationship(
+      userId,
+      followingIdInt
+    );
+
+    if(!followRemoved){
+        return res.status(404).json({message: 'Follower not found.'})
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    console.error("[DB ERROR] Failed to unfollow relationship:", error);
+    return res.status(500).json({ message: 'Internal server error during unfollow process.' });
+  }
+});
+
+async function removeFollowRelationship(followerId, followingId) {
+    const queryText = `
+        DELETE FROM follows
+        WHERE follower_id = $1 AND following_id = $2
+        RETURNING follower_id;
+    `;
+
+    const result = await pool.query(queryText, [followerId, followingId]);
+    return result.rowCount > 0;
+}
+
 // -----------------------------------------------------------------
 // B. START THE SERVICE
 // -----------------------------------------------------------------
