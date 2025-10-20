@@ -214,6 +214,26 @@ async function fetchAuthorDetails(authorId) {
 }
 
 
+app.post('/posts/:postId/like', authenticateToken, async (req, res)=>{
+  const postId = req.params.postId;
+  if (!postId || isNaN(parseInt(postId))) {
+    return res.status(400).json({ message: "Valid postId is required." });
+  }
+  try {
+    const response = await axios.post(`${POST_SERVICE_URL}/posts/${postId}/like`, {
+      headers: {
+        'x-user-id': req.headers['x-user-id']
+      }
+    });
+
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if(error.response){
+      return res.status(error.response.status).json(error.response.data);
+    }
+  }
+});
+
 const GATEWAY_PORT = process.env.GATEWAY_PORT;
 app.listen(GATEWAY_PORT, () => {
   console.log(`API Gateway running on port ${GATEWAY_PORT}`);

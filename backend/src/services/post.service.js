@@ -139,6 +139,30 @@ app.get('/posts/from-users/', async (req, res)=>{
     }
 });
 
+app.post('posts/:postId/like', async (req, res)=>{
+    const postId = parseInt(req.params.postId);
+    const userId = parseInt(res.headers['x-user-id']);
+   
+    try {
+        await likePost(postId, userId);
+        res.status(204).send(); 
+    } catch (error) {
+        console.error('[DB ERROR] Failed to add like to post', error);
+        res.status(500).json({ message: 'Internal server error adding post like.' });
+    }
+
+});
+
+async function likePost(postId, userId) {
+    const queryText = `
+        INSERT INTO post_likes(post_id, user_id)
+        VALUES ($1, $2)
+        ON CONFLICT (post_id, user_id) DO NOTHING;
+    `;
+    await pool.query(query, [postId, userId]);
+    return { success: true };
+}
+
 const POST_SERVICE_PORT = process.env.POST_SERVICE_PORT;
 app.listen(POST_SERVICE_PORT, () => {
   console.log(`Post Service running on port ${POST_SERVICE_PORT}`);
