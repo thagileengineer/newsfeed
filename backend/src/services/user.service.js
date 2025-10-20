@@ -244,6 +244,37 @@ async function addFollowRelationship(followerId, followingId) {
   return result.rowCount > 0;
 }
 
+app.get('/users/:userId/following', async (req, res)=>{
+    const userId = parseInt(req.headers['x-user-id']);
+    
+    try {
+        const followingIds = await getFollowingIds(userId);
+        res.status(200).json({
+            userId: parseInt(userId),
+            following: followingIds,
+            count: followingIds.length
+        });
+    } catch (error) {
+      console.error("[DB ERROR] Failed to fetch following users:", error);
+      res.status(500).json({ message: "Internal server error fetching users." });
+    }
+});
+
+/**
+ * get all the user ids followed by user.
+ * @param {number} userId 
+ * @returns {boolean}
+ */
+async function getFollowingIds(userId) {
+      const queryText = `
+        SELECT following_id
+        FROM follows
+        WHERE follower_id = $1;
+    `;
+    const result = await pool.query(queryText, [userId]);
+    return result.rows.map(row => row.following_id);
+}
+
 // -----------------------------------------------------------------
 // B. START THE SERVICE
 // -----------------------------------------------------------------

@@ -2,11 +2,14 @@ import express from "express";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import { pool } from "./pg.js";
+import axios from "axios";
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
+const USER_SERVICE_URL = `http://localhost:${process.env.USER_SERVICE_PORT}`;
+const PAGE_SIZE = 50; // Standard size for newsfeed fetching
 
 
 //new post
@@ -70,16 +73,53 @@ app.get('/posts/by-user', async (req, res)=>{
  * @param {number} authorId 
  * @returns Post array
  */
-async function getAllPostsByAuthorId(authorId){
+async function getPostsByAuthorIds(authorIds, limit = PAGE_SIZE){
     const queryText = `
-        SELECT * 
+        SELECT post_id, author_id, title, content, tags, media_url, created_at
         FROM posts
-        WHERE author_id = $1;
+        WHERE author_id = ANY($1::int[])
+        ORDER BY created_at DESC
+        LIMIT $2;
     `;
-
-    const result = await pool.query(queryText, [authorId]);
+    // The query expects the array of IDs as the first parameter ($1)
+    const result = await pool.query(queryText, [authorIds, limit]);
     return result.rows;
 }
+
+
+app.get('/posts/from-users/', async (req, res)=>{
+     const { ids, limit } = req.query;
+    
+    if (!ids) {
+        return res.status(400).json({ message: 'Missing required query parameter: ids (list of author IDs).' });
+    }
+
+    try {
+        // 1. Parse the comma-separated string of IDs into an array of integers
+        const authorIds = ids.split(',')
+                             .map(id => parseInt(id.trim()))
+                             .filter(id => !isNaN(id));
+        if (authorIds.length === 0) {
+            return res.status(200).json({ posts: [], message: 'No valid author IDs provided.' });
+        }
+
+         // 2. Determine limit
+        const postLimit = parseInt(limit) || PAGE_SIZE;
+
+         // 3. Fetch the posts
+        const posts = await getPostsByAuthorIds(authorIds, postLimit);
+
+        res.status(200).json({ 
+            posts: posts,
+            count: posts.length,
+            message: `Fetched ${posts.length} posts from ${authorIds.length} authors.`
+        });
+
+    } catch (error) {
+        console.error('[DB ERROR] Failed to fetch posts from users:', error);
+        res.status(500).json({ message: 'Internal server error while fetching posts.' });
+    }
+});
 
 const POST_SERVICE_PORT = process.env.POST_SERVICE_PORT;
 app.listen(POST_SERVICE_PORT, () => {

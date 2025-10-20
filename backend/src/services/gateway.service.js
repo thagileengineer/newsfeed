@@ -10,8 +10,8 @@ const app = express();
 app.use(bodyParser.json());
 dotenv.config();
 
-const USER_SERVICE_URL = "http://localhost:4001";
-const POST_SERVICE_URL = "http://localhost:4002";
+const USER_SERVICE_URL = `http://localhost:${process.env.USER_SERVICE_PORT}`;
+const POST_SERVICE_URL = `http://localhost:${process.env.POST_SERVICE_PORT}`;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 app.get("/health", (req, res) => {
@@ -135,6 +135,86 @@ app.get('/posts/by-user', authenticateToken, async (req, res)=>{
       }
     }
 });
+
+
+app.get('/feed', authenticateToken, async (req, res)=>{
+    const { limit } = req.query; // Allow client to pass a limit
+
+   try {
+      const followResponse = await axios.get(`${USER_SERVICE_URL}/users/${req.headers["x-user-id"]}/following`, {
+        headers: {
+          "x-user-id": req.headers["x-user-id"],
+        },
+      });
+
+       if (followResponse.ok) {
+            console.error(`Failed to fetch following list. Status: ${followResponse.status}`);
+            return res.status(500).json({ message: 'Could not retrieve social graph information.' });
+        }
+
+      let authorIds = followResponse.data.following || [];
+      authorIds = [...new Set(authorIds)]; 
+      if (authorIds.length === 0) {
+          return res.status(200).json({ feed: [], message: 'No posts available. Follow users to see their content!' });
+      }
+      
+      const idsQuery = authorIds.join(',');
+      const postResponse = await fetch(`${POST_SERVICE_URL}/posts/from-users?ids=${idsQuery}&limit=${limit || 50}`);
+      if (!postResponse.ok) {
+            console.error(`Failed to fetch posts. Status: ${postResponse.status}`);
+            return res.status(500).json({ message: 'Could not retrieve post data.' });
+        }
+
+      const postData = await postResponse.json();
+      const posts = postData.posts || [];
+      const uniqueAuthorIds = [...new Set(posts.map(post => post.author_id))];
+
+      const authorPromises = uniqueAuthorIds.map(fetchAuthorDetails);
+      const authorDetailsArray = await Promise.all(authorPromises);
+      const authorMap = authorDetailsArray.reduce((map, author) => {
+            map[author.id] = author;
+            return map;
+        }, {});
+
+      const personalizedFeed = posts.map(post => ({
+          ...post,
+          author: authorMap[post.author_id] || { username: 'Deleted User', firstName: 'N/A' }
+      }));
+      res.status(200).json({
+            feed: personalizedFeed,
+            count: personalizedFeed.length,
+            message: 'Personalized newsfeed successfully generated.'
+        });
+    } catch (error) {
+        console.error('[GATEWAY ERROR] Feed orchestration failed:', error);
+        res.status(503).json({ message: 'A required downstream service is unavailable.' });
+    }
+});
+
+/**
+ * fetch user details by id
+ * @param {number} authorId 
+ * @returns {User}
+ */
+async function fetchAuthorDetails(authorId) {
+    try {
+        const response = await fetch(`${USER_SERVICE_URL}/users/${authorId}`);
+        if (!response.ok) {
+            console.error(`Failed to fetch author ${authorId}. Status: ${response.status}`);
+            return { username: 'Unknown User', firstName: 'N/A' };
+        }
+        const user = await response.json();
+        return {
+            id: user.id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName
+        };
+    } catch (error) {
+        console.error(`Error fetching author details for ${authorId}:`, error);
+        return { username: 'Unknown User', firstName: 'N/A' };
+    }
+}
 
 
 const GATEWAY_PORT = process.env.GATEWAY_PORT;
