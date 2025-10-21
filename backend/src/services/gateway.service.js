@@ -150,7 +150,50 @@ app.post('/users/unfollow', authenticateToken, async (req, res)=>{
   }
 });
 
+app.get('/users/profile/:userId', authenticateToken, async (req, res)=>{
+  const userId = parseInt(req.params['userId']);
+  if(!userId || isNaN(userId)){
+    return res.status(400).json({message: 'Invalid or missing user id'});
+  }
 
+  try {
+    //user details
+    const userResponse = await axios.get(`${USER_SERVICE_URL}/users/details/${userId}`);
+    if(userResponse.status == 404){
+      return res.status(404).json({message: `User not found with id:${userId}`});
+    }
+    const userData = userResponse.data;
+
+    //follower count
+    const followerResponse = await axios.get(`${USER_SERVICE_URL}/users/followers`, {
+      headers: {
+        'x-user-id': req.headers['x-user-id']
+      }
+    });
+    userData.followers = followerResponse.data.count;
+
+    //following
+    const followResponse = await axios.get(`${USER_SERVICE_URL}/users/following`, {
+      headers: {
+        "x-user-id": req.headers["x-user-id"],
+      },
+    });
+
+    userData.following = followResponse.data.count;
+
+    //posts
+    const postsByUserResponse = await axios.get(`${POST_SERVICE_URL}/posts/by-user/${userId}`);
+    userData.posts = postsByUserResponse.data.data
+
+    res.status(200).json(userData);
+
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if(error.response){
+      return res.status(error.response.status).json(error.response.data)
+    }
+  }
+})
 
 app.post('/posts', authenticateToken,async (req, res)=>{
     try {

@@ -257,7 +257,10 @@ app.get("/users/details/:userId", async (req, res) => {
       lastname: userData.last_name,
       email: userData.email,
     });
-  } catch (error) {}
+  } catch (error) {
+    console.error('[DB ERROR] Error white fetching user details.');
+    res.status(500).json({ message: "Internal server error while fetching user details." });
+  }
 });
 
 /**
