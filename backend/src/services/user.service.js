@@ -142,25 +142,6 @@ async function getUserForLogin(username) {
   return result.rows[0];
 }
 
-app.get("/users/:userId", async (req, res) => {
-  const userId = req.params["userId"];
-  try {
-    const userData = await getUserInfoById(userId);
-    if (!userData) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json({
-      id: userData.user_id,
-      username: userData.username,
-      firstname: userData.first_name,
-      middlename: userData.middle_name,
-      lastname: userData.last_name,
-      email: userData.email,
-    });
-  } catch (error) {}
-});
-
 /**
  * gets user details by user id
  * @param {number} user_id
@@ -244,7 +225,7 @@ async function addFollowRelationship(followerId, followingId) {
   return result.rowCount > 0;
 }
 
-app.get('/users/:userId/following', async (req, res)=>{
+app.get('/users/following', async (req, res)=>{
     const userId = parseInt(req.headers['x-user-id']);
     
     try {
@@ -258,6 +239,25 @@ app.get('/users/:userId/following', async (req, res)=>{
       console.error("[DB ERROR] Failed to fetch following users:", error);
       res.status(500).json({ message: "Internal server error fetching users." });
     }
+});
+
+app.get("/users/details/:userId", async (req, res) => {
+  const userId = req.params["userId"];
+  try {
+    const userData = await getUserInfoById(userId);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      id: userData.user_id,
+      username: userData.username,
+      firstname: userData.first_name,
+      middlename: userData.middle_name,
+      lastname: userData.last_name,
+      email: userData.email,
+    });
+  } catch (error) {}
 });
 
 /**
@@ -318,6 +318,40 @@ async function removeFollowRelationship(followerId, followingId) {
     const result = await pool.query(queryText, [followerId, followingId]);
     return result.rowCount > 0;
 }
+
+
+
+app.get('/users/followers', async (req, res)=>{
+    const userId = parseInt(req.headers['x-user-id']);
+    
+    try {
+        const followerId = await getFollowerIds(userId);
+        res.status(200).json({
+            userId: parseInt(userId),
+            followers: followerId,
+            count: followerId.length
+        });
+    } catch (error) {
+      console.error("[DB ERROR] Failed to fetch following users:", error);
+      res.status(500).json({ message: "Internal server error fetching users." });
+    }
+});
+
+/**
+ * get all the followers of this user with userId.
+ * @param {number} userId 
+ * @returns {boolean}
+ */
+async function getFollowerIds(userId) {
+      const queryText = `
+        SELECT follower_id
+        FROM follows
+        WHERE following_id = $1;
+    `;
+    const result = await pool.query(queryText, [userId]);
+    return result.rows.map(row => row.follower_id);
+}
+
 
 // -----------------------------------------------------------------
 // B. START THE SERVICE

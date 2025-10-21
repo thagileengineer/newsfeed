@@ -73,10 +73,43 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-app.get('/users/:userId', authenticateToken , async (req, res)=>{
+app.post('/users/follows', authenticateToken, async (req, res)=>{
+  try {
+    const response = await axios.post(`${USER_SERVICE_URL}/users/follows`, req.body, {
+      headers: {
+        'x-user-id': req.headers['x-user-id']
+      }
+    });
+    res.status(response.status).json(response.data)
+    
+  } catch (error) {
+     if(error.response){
+      return res.status(error.response.status).json(error.response.data)
+    }
+  }
+});
+
+app.get('/users/following', authenticateToken, async (req, res)=>{
+  const userId = req.headers['x-user-id'];
+  try {
+    const response = await axios.get(`${USER_SERVICE_URL}/users/following`, {
+      headers: {
+        'x-user-id': userId
+      }
+    });
+    res.status(response.status).json(response.data)
+    
+  } catch (error) {
+     if(error.response){
+      return res.status(error.response.status).json(error.response.data)
+    }
+  }
+});
+
+app.get('/users/details/:userId', authenticateToken , async (req, res)=>{
   const userId = req.params['userId'];
   try {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/${userId}`);
+    const response = await axios.get(`${USER_SERVICE_URL}/users/details/${userId}`);
     res.status(response.status).json(response.data);
   } catch (error) {
     if(error.response){
@@ -85,9 +118,9 @@ app.get('/users/:userId', authenticateToken , async (req, res)=>{
   }
 })
 
-app.post('/users/follows', authenticateToken, async (req, res)=>{
+app.get('/users/followers', authenticateToken, async (req, res)=>{
   try {
-    const response = await axios.post(`${USER_SERVICE_URL}/users/follows`, req.body, {
+    const response = await axios.get(`${USER_SERVICE_URL}/users/followers`, {
       headers: {
         'x-user-id': req.headers['x-user-id']
       }
