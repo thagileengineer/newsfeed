@@ -163,6 +163,40 @@ async function likePost(postId, userId) {
     return { success: true };
 }
 
+
+app.post('/posts/comments/:postId', async (req, res)=>{
+    const postId = parseInt(req.params.postId);
+    const authorId = req.headers['x-user-id'];
+    const { content } = req.body;
+
+    try {
+        const newComment = await createComment(postId, authorId, content);
+        res.status(201).json({
+            id: newComment.comment_id,
+            postId: newComment.post_id,
+            authorId: newComment.author_id,
+            content: newComment.content,
+            createdAt: newComment.created_at
+        });
+    } catch (error) {
+        console.error('[DB ERROR] Failed to add new row im comments.', error);
+        res.status(500).json({message: 'Failed to add new comment.'})
+    }
+})
+
+
+async function createComment(postId, authorId, content) {
+    const queryText =  `
+        INSERT INTO comments (post_id, author_id, content)
+        VALUES ($1, $2, $3)
+        RETURNING comment_id, post_id, author_id, content, created_at
+    `;
+
+    const result = await pool.query(queryText, [postId, authorId, content]);
+    return result.rows[0];
+}
+
+
 const POST_SERVICE_PORT = process.env.POST_SERVICE_PORT;
 app.listen(POST_SERVICE_PORT, () => {
   console.log(`Post Service running on port ${POST_SERVICE_PORT}`);

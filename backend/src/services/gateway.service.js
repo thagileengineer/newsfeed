@@ -249,7 +249,7 @@ app.get('/feed', authenticateToken, async (req, res)=>{
     const { limit } = req.query; // Allow client to pass a limit
 
    try {
-      const followResponse = await axios.get(`${USER_SERVICE_URL}/users/${req.headers["x-user-id"]}/following`, {
+      const followResponse = await axios.get(`${USER_SERVICE_URL}/users/following`, {
         headers: {
           "x-user-id": req.headers["x-user-id"],
         },
@@ -344,6 +344,33 @@ app.post('/posts/:postId/like', authenticateToken, async (req, res)=>{
     }
   }
 });
+
+app.post('/posts/comments/:postId', authenticateToken, async (req, res)=>{
+  const postId = parseInt(req.params.postId);
+  const { content } = req.body;
+
+  if(!postId || isNaN(postId)){
+    return res.status(400).json({message: 'Post id is missing or invalid.'})
+  }
+
+  if(!content.length){
+    return res.status(400).json({message: 'Comment cannot be empty.'})
+  }
+
+  try {
+    const response = await axios.post(`${POST_SERVICE_URL}/posts/comments/${postId}`, req.body, {
+      headers: {
+        'x-user-id': req.headers['x-user-id']
+      }
+    });
+
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if(error.response){
+      return res.status(error.response.status).json(error.response.data);
+    }
+  }
+})
 
 const GATEWAY_PORT = process.env.GATEWAY_PORT;
 app.listen(GATEWAY_PORT, () => {
