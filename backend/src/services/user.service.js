@@ -1,7 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
+import dotenv, { parse } from "dotenv";
 import bcrypt from "bcrypt";
 import { pool } from "./pg.js";
 
@@ -355,6 +355,31 @@ async function getFollowerIds(userId) {
     return result.rows.map(row => row.follower_id);
 }
 
+app.get('/users/suggestions/most-followed', async (req, res)=>{
+  const userId = parseInt(req.headers['x-user-id'])
+  try {
+    const suggestions = await getTopTenMostFollowedUsers(userId);
+    res.status(200).json({data: suggestions});
+  } catch (error) {
+    console.error('[DB ERROR] Failed to fetch sugesstions', error);
+    res.status(500).json({message: 'Failed to give suggestions.'})
+  }
+})
+
+async function getTopTenMostFollowedUsers(currentUserId){
+    const queryText = `
+      SELECT u.user_id, u.username, COUNT(f.follower_id) AS follower_count
+      FROM users u
+      JOIN follows f ON u.user_id = f.following_id
+      WHERE u.user_id <> $1
+      GROUP BY u.user_id, u.username
+      ORDER BY follower_count DESC
+      LIMIT 10; 
+    `;
+
+    const result = await pool.query(queryText, [currentUserId]);
+    return result.rows;
+}
 
 // -----------------------------------------------------------------
 // B. START THE SERVICE

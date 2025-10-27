@@ -197,6 +197,23 @@ app.get('/users/profile/:userId', authenticateToken, async (req, res)=>{
   }
 })
 
+
+app.get('/users/suggestions/most-followed', authenticateToken, async (req, res)=>{
+
+  try {
+    const response = await axios.get(`${USER_SERVICE_URL}/users/suggestions/most-followed`, {
+      headers: {
+        'x-user-id': req.headers['x-user-id']
+      }
+    });
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if(error.response){
+      return res.status(error.response.status).json(error.response.data);
+    }
+  }
+})
+
 app.post('/posts', authenticateToken,async (req, res)=>{
     try {
       const response = await axios.post(`${POST_SERVICE_URL}/posts`, req.body, {
