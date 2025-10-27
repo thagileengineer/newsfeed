@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import "./user.service.js";
 import "./post.service.js";
 import rateLimiter from "../middlewares/rate-limiter.js";
+import userRouter from "../routes/user-routes.js";
+import postsRouter from "../routes/posts-route.js";
 
 const app = express();
 app.use(bodyParser.json());
@@ -75,175 +77,9 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-app.post('/users/follows', authenticateToken, async (req, res)=>{
-  try {
-    const response = await axios.post(`${USER_SERVICE_URL}/users/follows`, req.body, {
-      headers: {
-        'x-user-id': req.headers['x-user-id']
-      }
-    });
-    res.status(response.status).json(response.data)
-    
-  } catch (error) {
-     if(error.response){
-      return res.status(error.response.status).json(error.response.data)
-    }
-  }
-});
-
-app.get('/users/following', authenticateToken, async (req, res)=>{
-  const userId = req.headers['x-user-id'];
-  try {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/following`, {
-      headers: {
-        'x-user-id': userId
-      }
-    });
-    res.status(response.status).json(response.data)
-    
-  } catch (error) {
-     if(error.response){
-      return res.status(error.response.status).json(error.response.data)
-    }
-  }
-});
-
-app.get('/users/details/:userId', authenticateToken , async (req, res)=>{
-  const userId = req.params['userId'];
-  try {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/details/${userId}`);
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    if(error.response){
-      return res.status(error.response.status).json(error.response.data)
-    }
-  }
-})
-
-app.get('/users/followers', authenticateToken, async (req, res)=>{
-  try {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/followers`, {
-      headers: {
-        'x-user-id': req.headers['x-user-id']
-      }
-    });
-    res.status(response.status).json(response.data)
-    
-  } catch (error) {
-     if(error.response){
-      return res.status(error.response.status).json(error.response.data)
-    }
-  }
-});
-
-app.post('/users/unfollow', authenticateToken, async (req, res)=>{
-  try {
-    const response = await axios.post(`${USER_SERVICE_URL}/users/unfollow`, req.body, {
-      headers: {
-        'x-user-id': req.headers['x-user-id']
-      }
-    });
-    res.status(response.status).json(response.data)
-    
-  } catch (error) {
-     if(error.response){
-      return res.status(error.response.status).json(error.response.data)
-    }
-  }
-});
-
-app.get('/users/profile/:userId', authenticateToken, async (req, res)=>{
-  const userId = parseInt(req.params['userId']);
-  if(!userId || isNaN(userId)){
-    return res.status(400).json({message: 'Invalid or missing user id'});
-  }
-
-  try {
-    //user details
-    const userResponse = await axios.get(`${USER_SERVICE_URL}/users/details/${userId}`);
-    if(userResponse.status == 404){
-      return res.status(404).json({message: `User not found with id:${userId}`});
-    }
-    const userData = userResponse.data;
-
-    //follower count
-    const followerResponse = await axios.get(`${USER_SERVICE_URL}/users/followers`, {
-      headers: {
-        'x-user-id': req.headers['x-user-id']
-      }
-    });
-    userData.followers = followerResponse.data.count;
-
-    //following
-    const followResponse = await axios.get(`${USER_SERVICE_URL}/users/following`, {
-      headers: {
-        "x-user-id": req.headers["x-user-id"],
-      },
-    });
-
-    userData.following = followResponse.data.count;
-
-    //posts
-    const postsByUserResponse = await axios.get(`${POST_SERVICE_URL}/posts/by-user/${userId}`);
-    userData.posts = postsByUserResponse.data.data
-
-    res.status(200).json(userData);
-
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    if(error.response){
-      return res.status(error.response.status).json(error.response.data)
-    }
-  }
-})
-
-
-app.get('/users/suggestions/most-followed', authenticateToken, async (req, res)=>{
-
-  try {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/suggestions/most-followed`, {
-      headers: {
-        'x-user-id': req.headers['x-user-id']
-      }
-    });
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    if(error.response){
-      return res.status(error.response.status).json(error.response.data);
-    }
-  }
-})
-
-app.post('/posts', authenticateToken,async (req, res)=>{
-    try {
-      const response = await axios.post(`${POST_SERVICE_URL}/posts`, req.body, {
-        headers: {
-          "x-user-id": req.headers["x-user-id"],
-        },
-      });
-
-      res.status(response.status).json(response.data);
-    } catch (error) {
-      if(error.response){
-        return res.status(error.response.status).json(error.response.data)
-      }
-    }
-});
-
-
-app.get('/posts/by-user/:userId', authenticateToken, async (req, res)=>{
-  const userId = req.params['userId'] ?? req.headers["x-user-id"];
-  try {
-    const response = await axios.get(`${POST_SERVICE_URL}/posts/by-user/${userId}`);
-
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    if(error.response){
-      return res.status(error.response.status).json(error.response.data)
-    }
-  }
-});
-
+app.use(authenticateToken)
+app.use('/users', userRouter);
+app.use('/posts', postsRouter);
 
 app.get('/feed', authenticateToken, async (req, res)=>{
     const { limit } = req.query; // Allow client to pass a limit
@@ -323,54 +159,6 @@ async function fetchAuthorDetails(authorId) {
         return { username: 'Unknown User', firstName: 'N/A' };
     }
 }
-
-
-app.post('/posts/:postId/like', authenticateToken, async (req, res)=>{
-  const postId = req.params.postId;
-  if (!postId || isNaN(parseInt(postId))) {
-    return res.status(400).json({ message: "Valid postId is required." });
-  }
-  try {
-    const response = await axios.post(`${POST_SERVICE_URL}/posts/${postId}/like`, {
-      headers: {
-        'x-user-id': req.headers['x-user-id']
-      }
-    });
-
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    if(error.response){
-      return res.status(error.response.status).json(error.response.data);
-    }
-  }
-});
-
-app.post('/posts/comments/:postId', authenticateToken, async (req, res)=>{
-  const postId = parseInt(req.params.postId);
-  const { content } = req.body;
-
-  if(!postId || isNaN(postId)){
-    return res.status(400).json({message: 'Post id is missing or invalid.'})
-  }
-
-  if(!content.length){
-    return res.status(400).json({message: 'Comment cannot be empty.'})
-  }
-
-  try {
-    const response = await axios.post(`${POST_SERVICE_URL}/posts/comments/${postId}`, req.body, {
-      headers: {
-        'x-user-id': req.headers['x-user-id']
-      }
-    });
-
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    if(error.response){
-      return res.status(error.response.status).json(error.response.data);
-    }
-  }
-})
 
 const GATEWAY_PORT = process.env.GATEWAY_PORT;
 app.listen(GATEWAY_PORT, () => {
