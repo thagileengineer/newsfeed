@@ -8,11 +8,13 @@ import "./post.service.js";
 import rateLimiter from "../middlewares/rate-limiter.js";
 import userRouter from "../routes/user-routes.js";
 import postsRouter from "../routes/posts-route.js";
+import morgan from 'morgan';
 
 const app = express();
 app.use(bodyParser.json());
 dotenv.config();
-app.use(rateLimiter)
+app.use(rateLimiter);
+app.use(morgan('dev'));
 
 const USER_SERVICE_URL = `http://localhost:${process.env.USER_SERVICE_PORT}`;
 const POST_SERVICE_URL = `http://localhost:${process.env.POST_SERVICE_PORT}`;

@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import { pool } from "./pg.js";
+import logger from "../logger.js";
 
 dotenv.config();
 
@@ -253,12 +254,19 @@ app.get('/users/following', async (req, res)=>{
 });
 
 app.get("/users/details/:userId", async (req, res) => {
+  
   const userId = req.params["userId"];
+  logger.info(`Starting order processing for ID: ${userId}`);
+
   try {
     const userData = await getUserInfoById(userId);
     if (!userData) {
+      logger.warn(`UserID ${userId} is missing optional data.`);
+
       return res.status(404).json({ message: "User not found" });
     }
+
+    logger.debug(`Database query executed successfully for order ${userId}.`);
 
     res.status(200).json({
       id: userData.user_id,
@@ -268,8 +276,12 @@ app.get("/users/details/:userId", async (req, res) => {
       lastname: userData.last_name,
       email: userData.email,
     });
+
+        
+    logger.info(`User ${userId} processed successfully.`);
   } catch (error) {
     console.error('[DB ERROR] Error white fetching user details.');
+    logger.error(`Failed to process order ${userId}: ${error.message}`, { stack: error.stack });
     res.status(500).json({ message: "Internal server error while fetching user details." });
   }
 });
