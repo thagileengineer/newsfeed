@@ -84,4 +84,48 @@ postsRouter.post('/comments/:postId', async (req, res)=>{
   }
 })
 
+postsRouter.get('/:postId/comments', async (req, res)=>{
+  const postId = parseInt(req.params.postId);
+
+  if(!postId || isNaN(postId)){
+    return res.status(400).json({message: 'Post id is missing or invalid.'})
+  }
+
+  try {
+    const response = await axios.get(`${POST_SERVICE_URL}/posts/${postId}/comments`, {
+      headers: {
+        'x-user-id': req.headers['x-user-id']
+      }
+    });
+
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if(error.response){
+      return res.status(error.response.status).json(error.response.data);
+    }
+  }
+})
+
+postsRouter.get('/comments/:commentId', async (req, res)=>{
+  const commentId = parseInt(req.params.commentId);
+
+  if(!commentId || isNaN(commentId)){
+    return res.status(400).json({message: 'Post id is missing or invalid.'})
+  }
+
+  try {
+    const response = await axios.get(`${POST_SERVICE_URL}/posts/comments/${commentId}`,{
+      headers: {
+        'x-user-id': req.headers['x-user-id']
+      }
+    });
+
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if(error.response){
+      return res.status(error.response.status).json(error.response.data);
+    }
+  }
+})
+
 export default postsRouter;

@@ -196,6 +196,53 @@ async function createComment(postId, authorId, content) {
     return result.rows[0];
 }
 
+app.get('/posts/:postId/comments', async (req, res)=>{
+    const postId = parseInt(req.params.postId);
+
+    try {
+        const comments = await getCommentByPostId(postId);
+        res.status(200).json({data: comments});
+    } catch (error) {
+        console.error('[DB ERROR] Failed to get comments data for post.', error);
+        res.status(500).json({message: 'Failed to fetch comments.'})
+    }
+})
+
+
+async function getCommentByPostId(postId) {
+    const queryText =  `
+        SELECT * from comments
+        WHERE post_id = $1;
+    `;
+
+    const result = await pool.query(queryText, [postId]);
+    return result.rows;
+}
+
+
+app.get('/posts/comments/:commentId', async (req, res)=>{
+    const commentId = parseInt(req.params.commentId);
+
+    try {
+        const comments = await getCommentDetailById(commentId);
+        res.status(200).json({data: comments});
+    } catch (error) {
+        console.error('[DB ERROR] Failed to get comment by id.', error);
+        res.status(500).json({message: 'Failed to fetch comment.'})
+    }
+})
+
+
+async function getCommentDetailById(commentId) {
+    const queryText =  `
+        SELECT * from comments
+        WHERE post_id = $1;
+    `;
+
+    const result = await pool.query(queryText, [commentId]);
+    return result.rows[0];
+}
+
 
 const POST_SERVICE_PORT = process.env.POST_SERVICE_PORT;
 app.listen(POST_SERVICE_PORT, () => {
