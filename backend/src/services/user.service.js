@@ -1,7 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import jwt from "jsonwebtoken";
-import dotenv, { parse } from "dotenv";
+import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import { pool } from "./pg.js";
 
@@ -12,6 +12,17 @@ const SALT_ROUNDS = 10;
 
 const app = express();
 app.use(bodyParser.json());
+
+const validateInternalSecret = (req, res, next) => {
+  const internalSecret = req.headers['x-internal-secret'];
+
+  if (internalSecret !== process.env.INTERNAL_SECRET_KEY)
+    return res.status(401).json({ message: "Unauthorizes access." });
+
+  next();
+};
+app.use(validateInternalSecret);
+
 
 //------------------------
 // USER CREATION

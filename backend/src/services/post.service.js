@@ -2,15 +2,24 @@ import express from "express";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import { pool } from "./pg.js";
-import axios from "axios";
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
-const USER_SERVICE_URL = `http://localhost:${process.env.USER_SERVICE_PORT}`;
 const PAGE_SIZE = 50; // Standard size for newsfeed fetching
 
+const validateInternalSecret = (req, res, next) => {
+  const internalSecret = req.headers["x-internal-secret"];
+
+  if (internalSecret !== process.env.INTERNAL_SECRET_KEY)
+    return res.status(401).json({ message: "Unauthorizes access." });
+
+  next();
+
+};
+
+app.use(validateInternalSecret);
 
 //new post
 app.post('/posts', async (req, res)=>{

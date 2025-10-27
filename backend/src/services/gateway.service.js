@@ -72,6 +72,7 @@ const authenticateToken = (req, res, next) => {
     }
     req.user = user;
     req.headers["x-user-id"] = user.id;
+    req.headers['x-internal-scecret'] = process.env.INTERNAL_SECRET_KEY;
 
     next();
   });
@@ -160,6 +161,22 @@ async function fetchAuthorDetails(authorId) {
     }
 }
 
+// --- Axios Interceptor for Internal Security Headers ---
+axios.interceptors.request.use(config => {
+    const isInternalCall = 
+        config.url.startsWith(USER_SERVICE_URL) ||
+        config.url.startsWith(POST_SERVICE_URL)
+
+    if (isInternalCall) {
+
+        config.headers['x-internal-secret'] = config.headers['x-internal-secret'] || process.env.INTERNAL_SECRET_KEY;
+        config.headers['x-user-id'] = config.headers['x-user-id']; 
+    }
+    return config;
+}, error => {
+
+    return Promise.reject(error);
+});
 const GATEWAY_PORT = process.env.GATEWAY_PORT;
 app.listen(GATEWAY_PORT, () => {
   console.log(`API Gateway running on port ${GATEWAY_PORT}`);
