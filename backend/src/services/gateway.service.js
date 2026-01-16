@@ -9,21 +9,70 @@ import rateLimiter from "../middlewares/rate-limiter.js";
 import userRouter from "../routes/user-routes.js";
 import postsRouter from "../routes/posts-route.js";
 import morgan from 'morgan';
-
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "../../swagger.js";
 const app = express();
 app.use(bodyParser.json());
 dotenv.config();
 app.use(rateLimiter);
 app.use(morgan('dev'));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const USER_SERVICE_URL = `http://localhost:${process.env.USER_SERVICE_PORT}`;
 const POST_SERVICE_URL = `http://localhost:${process.env.POST_SERVICE_PORT}`;
 const JWT_SECRET = process.env.JWT_SECRET;
 
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     description: Check if the API gateway is running
+ *     tags:
+ *       - Health
+ *     responses:
+ *       200:
+ *         description: Service is healthy
+ */
 app.get("/health", (req, res) => {
   res.status(200).json({ message: "Alive!!" });
 });
 
+/**
+ * @swagger
+ * /register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Create a new user account
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Unique username
+ *               firstname:
+ *                 type: string
+ *                 description: User's first name
+ *               email:
+ *                 type: string
+ *                 description: User's email address
+ *               password:
+ *                 type: string
+ *                 description: User's password
+ *     responses:
+ *       200:
+ *         description: User registered successfully
+ *       400:
+ *         description: Invalid request
+ *       500:
+ *         description: Service unavailable
+ */
 app.post("/register", async (req, res) => {
   const { username, firstname, email, password } = req.body;
 
@@ -45,6 +94,33 @@ app.post("/register", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Login user
+ *     description: Authenticate user and get JWT token
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: User's username
+ *               password:
+ *                 type: string
+ *                 description: User's password
+ *     responses:
+ *       200:
+ *         description: Login successful, JWT token provided
+ *       400:
+ *         description: Invalid credentials
+ */
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -84,6 +160,31 @@ app.use(authenticateToken)
 app.use('/users', userRouter);
 app.use('/posts', postsRouter);
 
+/**
+ * @swagger
+ * /feed:
+ *   get:
+ *     summary: Get personalized feed
+ *     description: Retrieve personalized newsfeed for authenticated user based on who they follow
+ *     tags:
+ *       - Feed
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of posts to retrieve
+ *     responses:
+ *       200:
+ *         description: Feed retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       503:
+ *         description: Service unavailable
+ */
 app.get('/feed', authenticateToken, async (req, res)=>{
     const { limit } = req.query; // Allow client to pass a limit
 

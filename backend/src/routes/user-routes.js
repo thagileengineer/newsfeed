@@ -8,6 +8,34 @@ const POST_SERVICE_URL = `http://localhost:${process.env.POST_SERVICE_PORT}`;
 
 const userRouter = Router();
 
+/**
+ * @swagger
+ * /users/follows:
+ *   post:
+ *     summary: Follow a user
+ *     description: Add a user to your following list
+ *     tags:
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 description: ID of the user to follow
+ *     responses:
+ *       200:
+ *         description: Successfully followed user
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ */
 userRouter.post('/follows', async (req, res)=>{
   try {
     const response = await axios.post(`${USER_SERVICE_URL}/users/follows`, req.body, {
@@ -24,6 +52,22 @@ userRouter.post('/follows', async (req, res)=>{
   }
 });
 
+/**
+ * @swagger
+ * /users/following:
+ *   get:
+ *     summary: Get following list
+ *     description: Retrieve the list of users you are following
+ *     tags:
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Following list retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ */
 userRouter.get('/following', async (req, res)=>{
   const userId = req.headers['x-user-id'];
   try {
@@ -41,6 +85,27 @@ userRouter.get('/following', async (req, res)=>{
   }
 });
 
+/**
+ * @swagger
+ * /users/details/{userId}:
+ *   get:
+ *     summary: Get user details
+ *     description: Retrieve details of a specific user by ID
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The user ID
+ *     responses:
+ *       200:
+ *         description: User details retrieved successfully
+ *       404:
+ *         description: User not found
+ */
 userRouter.get('/details/:userId', async (req, res)=>{
   const userId = req.params['userId'];
   try {
@@ -53,6 +118,22 @@ userRouter.get('/details/:userId', async (req, res)=>{
   }
 })
 
+/**
+ * @swagger
+ * /users/followers:
+ *   get:
+ *     summary: Get followers list
+ *     description: Retrieve the list of users following you
+ *     tags:
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Followers list retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ */
 userRouter.get('/followers', async (req, res)=>{
   try {
     const response = await axios.get(`${USER_SERVICE_URL}/users/followers`, {
@@ -69,6 +150,34 @@ userRouter.get('/followers', async (req, res)=>{
   }
 });
 
+/**
+ * @swagger
+ * /users/unfollow:
+ *   post:
+ *     summary: Unfollow a user
+ *     description: Remove a user from your following list
+ *     tags:
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 description: ID of the user to unfollow
+ *     responses:
+ *       200:
+ *         description: Successfully unfollowed user
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ */
 userRouter.post('/unfollow', async (req, res)=>{
   try {
     const response = await axios.post(`${USER_SERVICE_URL}/users/unfollow`, req.body, {
@@ -85,6 +194,29 @@ userRouter.post('/unfollow', async (req, res)=>{
   }
 });
 
+/**
+ * @swagger
+ * /users/profile/{userId}:
+ *   get:
+ *     summary: Get user profile
+ *     description: Retrieve comprehensive profile information for a user including details, followers, following, and posts
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The user ID
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *       400:
+ *         description: Invalid or missing user ID
+ *       404:
+ *         description: User not found
+ */
 userRouter.get('/profile/:userId', async (req, res)=>{
   const userId = parseInt(req.params['userId']);
   if(!userId || isNaN(userId)){
@@ -131,6 +263,22 @@ userRouter.get('/profile/:userId', async (req, res)=>{
 })
 
 
+/**
+ * @swagger
+ * /users/suggestions/most-followed:
+ *   get:
+ *     summary: Get most followed user suggestions
+ *     description: Retrieve suggestions of most followed users
+ *     tags:
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User suggestions retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ */
 userRouter.get('/suggestions/most-followed', async (req, res)=>{
 
   try {
